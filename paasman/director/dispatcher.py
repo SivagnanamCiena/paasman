@@ -6,6 +6,9 @@ from gevent.queue import Queue
 import etcd
 from paasman.director import director_manager
 
+import gevent.monkey
+gevent.monkey.patch_socket() # make the tcp connection non-blocking
+
 tasks = Queue()
 
 zmq_ctx = zmq.Context()
@@ -41,7 +44,7 @@ def manager():
 
 def cluster_listener():
     while True:
-        r = etcd.watch("/services/agents") # blocking
+        r = etcd_client.watch("services/agents") # blocking
         if r.action == "SET": # adding a node to the cluster
             tasks.put_nowait({
                 "task": "add_node",

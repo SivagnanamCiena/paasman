@@ -54,7 +54,7 @@ def docker_worker():
     """Manage a queue and perform actions via the hosts docker remote api"""
 
 
-def agent_notifier_runner():
+def agent_notifier_runner(host):
     """Periodically add itself to etcd to announce its existence to the cluster.
     Saved under the keyspace /services/agents/ and with a TTL set to 30 seconds
     TODO: we may use something other than 30 seconds...
