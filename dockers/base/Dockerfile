@@ -13,6 +13,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -q -y python
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -q -y python-pip
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -q -y python-dev
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -q -y vim
+
 # build things
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -q -y libtool autoconf automake uuid-dev build-essential g++ make
 
@@ -25,7 +27,7 @@ RUN cd zeromq-2.2.0 && ./configure
 RUN cd zeromq-2.2.0 && make && make install
 
 # download the project and place it under paasman
-ADD https://github.com/ahlen/paasman/archive/master.tar.gz paasman-src/
-RUN cd paasman-src && tar -xzvf master.tar.gz --strip-components 1
+#ADD https://github.com/ahlen/paasman/archive/master.tar.gz paasman-src/
+#RUN cd paasman-src && tar -xzvf master.tar.gz --strip-components 1
 
-RUN cd paasman-src && pip install -r requirements.txt
+#RUN cd paasman-src && pip install -r requirements.txt

@@ -21,12 +21,23 @@ from paasman.director import exceptions
 
 COREOS_IMAGE = "ami-00000003"
 
+class AgentNode(object):
+    def __init__(self, name, ip, updated_at):
+        self.name = name
+        self.ip = ip
+        self.updated_at = updated_at
+
+    def __repr__(self):
+        return "Agent(%s, %s, %s)" % (self.name, self.ip, self.updated_at)
+
 class DirectorManager(object):
     """DirectorManager is responsible for handle the deployment of
     applications and manage the deployed instances.
     """
 
     def __init__(self, storage_path):
+        self._nodes = {}
+
         self.storage_path = storage_path
 
         self.boto_region = boto.ec2.regioninfo.RegionInfo(name="nova", endpoint=config.EC2_ENDPOINT)
@@ -38,6 +49,25 @@ class DirectorManager(object):
             port=8773,
             path="/services/Cloud"
         )
+
+    def add_node(self, name, ip):
+        """Add node add or update a node in its list of known nodes in the cluster"""
+        node = AgentNode(
+            name=name,
+            ip=ip,
+            updated_at=datetime.datetime.utcnow()
+        )
+        self._nodes.update({name: node})
+
+        print "added node, current status:", self._nodes
+        return node
+
+    def remove_node(self, name):
+        if name in self._nodes:
+            del self._nodes[name]
+            print "removed node, current status:", self._nodes
+            return True
+        return False
 
     def add_vm_instances(self, instances_count):
         """add instances to the cluster"""

@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 if __name__ == "__main__":
     gevent.spawn(dispatcher.worker)
     gevent.spawn(dispatcher.manager)
+    gevent.spawn(dispatcher.cluster_listener)
     print "- started dispatcher worker"
 
     if len(sys.argv) > 1:

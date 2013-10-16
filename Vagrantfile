@@ -43,9 +43,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     coreos.vm.box_url = "http://storage.core-os.net/coreos/amd64-generic/dev-channel/coreos_production_vagrant.box"
 
     coreos.vm.hostname = "coreos-master"
-    coreos.vm.network :private_network, :ip => "10.10.10.2"
+    coreos.vm.network :private_network, :ip => "10.0.0.10"
 
-    config.vm.network "forwarded_port", guest: 5000, host: 5100
+    coreos.vm.network "forwarded_port", guest: 5000, host: 5100
+
+    coreos.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true,  :mount_options   => ['nolock,vers=3,udp']
 
     # TODO:
     coreos.vm.provision :shell, :path => "bootstraps/bootstrap-master.sh"
@@ -64,10 +66,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       #coreos.vm.box_url = "http://storage.core-os.net/coreos/amd64-generic/72.0.0/coreos_production_vagrant.box"
 
       coreos.vm.hostname = vm_name
-      coreos.vm.network :private_network, :ip => "10.10.10.#{3+n}"
+      coreos.vm.network :private_network, :ip => "10.0.0.#{13+n}"
 
       # TODO:
       #coreos.vm.provision :shell, :path => "bootstrap-cluster.sh"
+
+      coreos.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true,  :mount_options   => ['nolock,vers=3,udp']
 
       coreos.vm.provider :virtualbox do |vb|
         vb.customize ["modifyvm", :id, "--memory", "512"]
