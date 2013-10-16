@@ -42,7 +42,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     #coreos.vm.box_url = "http://storage.core-os.net/coreos/amd64-generic/91.0.0/coreos_production_vagrant.box"
     coreos.vm.box_url = "http://storage.core-os.net/coreos/amd64-generic/dev-channel/coreos_production_vagrant.box"
 
-    #coreos.vm.network :private_network, :ip => "10.10.10.2"
+    coreos.vm.hostname = "coreos-master"
+    coreos.vm.network :private_network, :ip => "10.10.10.2"
 
     config.vm.network "forwarded_port", guest: 5000, host: 5100
 
@@ -57,10 +58,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # coreos-n should be virtual machines in the cluster.
 
   1.times do |n|
-    config.vm.define "coreos-#{n}" do |coreos|
-      coreos.vm.box = "coreos-72"
-      coreos.vm.box_url = "http://storage.core-os.net/coreos/amd64-generic/72.0.0/coreos_production_vagrant.box"
+    config.vm.define vm_name="coreos-#{n}" do |coreos|
+      coreos.vm.box = "coreos-72dev"
+      coreos.vm.box_url = "http://storage.core-os.net/coreos/amd64-generic/dev-channel/coreos_production_vagrant.box"
+      #coreos.vm.box_url = "http://storage.core-os.net/coreos/amd64-generic/72.0.0/coreos_production_vagrant.box"
 
+      coreos.vm.hostname = vm_name
       coreos.vm.network :private_network, :ip => "10.10.10.#{3+n}"
 
       # TODO:
