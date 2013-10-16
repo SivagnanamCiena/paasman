@@ -8,7 +8,7 @@
 
 from flask import Flask, request, jsonify
 from paasman.director.manager import DirectorManager
-from paasman.director import dispatcher
+#from paasman.director import dispatcher
 
 app = Flask(__name__)
 
@@ -25,7 +25,7 @@ def api_error(message, status=400):
 
 @app.route("/apps/", methods=["GET"])
 def list_apps():
-    dispatcher.tasks.put_nowait("hello!")
+    #dispatcher.tasks.put_nowait("hello!")
 
     return "added to queue"
 

@@ -10,7 +10,7 @@ tasks = Queue()
 
 zmq_ctx = zmq.Context()
 
-etcd_client = 
+etcd_client = etcd.Etcd("172.17.42.1")
 
 def worker():
     """Worker that needs to be a singleton worker"""

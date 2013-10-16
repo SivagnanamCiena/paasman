@@ -1,6 +1,6 @@
 #FROM ubuntu:12.04
 
-FROM paasman/base
+FROM paasman/paasman-src
 
 MAINTAINER paasman
 

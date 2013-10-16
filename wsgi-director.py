@@ -16,9 +16,10 @@ from paasman.director.db import session, session_scope
 from sqlalchemy.exc import IntegrityError
 
 if __name__ == "__main__":
-    gevent.spawn(dispatcher.worker)
-    gevent.spawn(dispatcher.manager)
-    gevent.spawn(dispatcher.cluster_listener)
+    wrker = gevent.spawn(dispatcher.worker)
+    mangr = gevent.spawn(dispatcher.manager)
+    clstr = gevent.spawn(dispatcher.cluster_listener)
+    #gevent.joinall([wrker, mangr, clstr])
     print "- started dispatcher worker"
 
     if len(sys.argv) > 1:

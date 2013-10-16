@@ -64,6 +64,7 @@ def agent_notifier_runner():
     key = hashlib.sha1(host).hexdigest() # we can of course have the ip as the key too...
 
     while True:
-        r = etcd_client.set("/services/agents/%s" % key, host, ttl=30)
+        r = etcd_client.set("services/agents/%s" % key, host, ttl=30)
         # TODO: wrap in try-except block?
         gevent.sleep(14)
+
