@@ -8,6 +8,7 @@
 
 import hashlib
 import gevent
+from gevent.queue import Queue
 import etcd
 import docker
 import zmq.green as zmq
@@ -21,15 +22,18 @@ etcd_client = etcd.Etcd("172.17.42.1", follow_leader=True)
 # we mount the coreos /var/ to /coreos_run/
 docker_client = docker.Client("unix://coreos_run/docker.sock")
 
+# tasks that should be sent to the master/director
+director_tasks = Queue()
+
 def get_director_ip():
     """trying to get the director address to the master server (ZeroMQ)"""
     try:
-        addr = etcd.get("services/director")
+        addr = etcd_client.get("services/director")
         return addr.value
     except:
         while True:
             # we may add try-except block here aswell since either requests or etcd may raise exception
-            addr = etcd.watch("services/director")
+            addr = etcd_client.watch("services/director")
             gevent.sleep(0)
             return addr.value
 
@@ -37,28 +41,57 @@ director_ip = get_director_ip()
 
 zmq_ctx = zmq.Context()
 subscriber = zmq_ctx.socket(zmq.SUB)
-subscriber.connect("tcp://%s:5555" % diretor_ip)
+subscriber.connect("tcp://%s:5555" % director_ip)
 #subscriber.connect("tcp://172.17.42.1:5555") # TODO: 172.17.42.1 on a single node, change when clustering to read key in etcd
 
 teller = zmq_ctx.socket(zmq.REQ)
-teller.connect("tcp://%s:5111" % diretor_ip)
+teller.connect("tcp://%s:5111" % director_ip)
 #teller.connect("tcp://172.17.42.1:5111") # 172.17.42.1 on a single node, change when clustering to to read key in etcd
 
 
 def event_listener():
     #print docker_client.info()
     while True:
-        print "send to master"
-        teller.send("node is calling")
-        response = teller.recv() # blocking, wait on response from server
-        # we may use timeout on recv and put the request to an internal queue and
-        #   when the master response, we send the queued commands
-        print response
+        try:
+            print "send to master"
+            teller.send("node is calling")
+            response = teller.recv() # blocking, wait on response from server
+            # we may use timeout on recv and put the request to an internal queue and
+            #   when the master response, we send the queued commands
+            print "after response:", response
+            gevent.sleep(5) # wait 5 seconds since we doesn't want to send a flood of messages
+            # but we should block on the director_tasks later
+        except zmq.ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                yield
+                # gevent.sleep(0)
 
-        gevent.sleep(5) # wait 5 seconds since we doesn't want to send a flood of messages
+
+def docker_listener():
+    """Listen och events from docker to get notified when changes happen
+    to example handle stopped containers.
+    """
+    while True:
+        try:
+            response = docker_client.get(docker_client._url("/events"), stream=True)
+            builder = []
+            for c in r.iter_content(1):
+                builder.append(c)
+                if c == "}":
+                    result = json.loads("".join(builder))
+                    director_tasks.put_nowait(result)
+                    print "put task in director_tasks"
+                    builder = [] # reset
+        except:
+            pass
+        finally:
+            gevent.sleep(0)
+
 
 def docker_worker():
     """Manage a queue and perform actions via the hosts docker remote api"""
+    
+
 
 
 def agent_notifier_runner(host):
