@@ -2,7 +2,7 @@
 
 import sys
 import gevent
-from paasman.agent import event_listener, agent_notifier_runner, docker_listener, docker_worker
+from paasman.agent import event_listener, agent_notifier_runner, docker_listener, docker_worker, subscriber_listener
 
 if __name__ == "__main__":
     host = "10.0.0.10" if len(sys.argv) < 2 else sys.argv[1]
@@ -12,4 +12,5 @@ if __name__ == "__main__":
     notifier = gevent.spawn(agent_notifier_runner, host)
     dock_listener = gevent.spawn(docker_listener)
     dock_worker = gevent.spawn(docker_worker)
-    gevent.joinall([el, notifier, dock_listener, dock_worker])
+    subsc = gevent.spawn(subscriber_listener)
+    gevent.joinall([el, notifier, dock_listener, dock_worker, subsc])

@@ -17,6 +17,9 @@ $ etcd -f -cl 0.0.0.0 -s 10.10.10.3:7001 -c 10.10.10.3:4001 -C 10.10.10.2:7001 -
 
 To fetch the instance local ip, use: http://169.254.169.254/latest/meta-data/local-ipv4
 
+To start a (node.js) application:
+$ docker run -e APP_NAME=mikael -d -i -t paasman/apprunner
+
 Architecture
 ------------
 The current design of the system is like follows.
