@@ -72,15 +72,15 @@ def subscriber_listener():
         msg = subscriber.recv()
         print msg
         # TODO: this just create instances of new containers to test how it works
-        container = etcd_client.create_container(
+        container = docker_client.create_container(
             image="paasman/apprunner",
             command=["./paasman-node/runner.sh"],
             environment={
                 "APP_NAME": "demo" # TODO: this should be the real appname!
             }
         )
-        etcd_client.start(container.Id)
-        print "Container with id=%s started!" % container.Id
+        docker_client.start(container.get("Id"))
+        print "Container with id=%s started!" % container.get("Id")
 
         #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
         gevent.sleep(0)
