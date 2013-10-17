@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from paasman.director.db import Base
 
 class Application(Base): # change to Base
-    __tablename__ == "applications"
+    __tablename__ = "applications"
 
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, index=True)

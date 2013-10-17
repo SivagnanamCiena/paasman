@@ -72,6 +72,6 @@ def get_cluster_nodes():
     try:
         nodes = map(lambda e: e.value, etcd_client.list("services/agents"))
 
-        return jsonify({"nodes:" nodes})
+        return jsonify({"nodes": nodes})
     except:
         return api_error("Error during fetching agents/nodes from etcd", 500)

@@ -19,6 +19,8 @@ if __name__ == "__main__":
     wrker = gevent.spawn(dispatcher.worker)
     mangr = gevent.spawn(dispatcher.manager)
     clstr = gevent.spawn(dispatcher.cluster_listener)
+    # tmp
+    t = gevent.spawn(dispatcher.test_publisher)
     #gevent.joinall([wrker, mangr, clstr])
     print "- started dispatcher worker"
 

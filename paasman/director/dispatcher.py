@@ -42,6 +42,14 @@ def manager():
         tasks.put_nowait(r)
         socket.send("you said %s" % r)
 
+def test_publisher():
+    publisher = zmq_ctx.socket(zmq.PUB)
+    publisher.bind("tcp://*:5555")
+
+    while True:
+        publisher.send("hallo")
+        gevent.sleep(30)
+
 def cluster_listener():
     while True:
         r = etcd_client.watch("services/agents") # blocking

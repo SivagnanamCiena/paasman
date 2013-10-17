@@ -42,6 +42,7 @@ director_ip = get_director_ip()
 zmq_ctx = zmq.Context()
 subscriber = zmq_ctx.socket(zmq.SUB)
 subscriber.connect("tcp://%s:5555" % director_ip)
+subscriber.setsockopt(zmq.SUBSCRIBE, "")
 #subscriber.connect("tcp://172.17.42.1:5555") # TODO: 172.17.42.1 on a single node, change when clustering to read key in etcd
 
 teller = zmq_ctx.socket(zmq.REQ)
@@ -65,6 +66,12 @@ def event_listener():
             if e.errno == zmq.EAGAIN:
                 yield
                 # gevent.sleep(0)
+
+def subscriber_listener():
+    while True:
+        msg = subscriber.recv()
+        print msg
+        gevent.sleep(0)
 
 
 def docker_listener():
@@ -90,7 +97,9 @@ def docker_listener():
 
 def docker_worker():
     """Manage a queue and perform actions via the hosts docker remote api"""
-    
+    while True:
+        print "docker says hi!"
+        gevent.sleep(10)
 
 
 
