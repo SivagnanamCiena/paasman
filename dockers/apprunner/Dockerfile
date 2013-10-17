@@ -1,10 +1,16 @@
-FROM ubuntu:12.04
+FROM paasman/nodebase
 
 MAINTAINER paasman
 
-RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" > /etc/apt/sources.list
-RUN apt-get update
+ADD container.js /paasman-node/container.js
 
-#ADD container.js container.js
+# TODO: fetch the file from 
 
-# ...
+# we expose port 80 but this will be mapped to a random port on the outside
+EXPOSE 80
+
+ADD run /usr/local/bin/run
+
+CMD ["/usr/local/bin/run"]
+
+#CMD ["nodejs", "/app/container.js", "/app/deployed/"]

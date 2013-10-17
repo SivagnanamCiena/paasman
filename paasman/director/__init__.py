@@ -8,9 +8,18 @@
 
 from flask import Flask, request, jsonify
 from paasman.director.manager import DirectorManager
+from paasman.director.db import session
 #from paasman.director import dispatcher
 
+import etcd
+
+etcd_client = etcd.Etcd("172.17.42.1")
+
 app = Flask(__name__)
+
+@app.teardown_appcontext
+def remove_db_session(exception=None):
+    session.remove()
 
 # TODO: move the filepath to director.cfg
 import os
@@ -57,3 +66,12 @@ def delete_app(id):
 def download_appfile(name):
     # TODO: return the file for the asked app, used by a docker file that fetch the file to run
     return "No file"
+
+@app.route("/_paasman/nodes/", methods=["GET"])
+def get_cluster_nodes():
+    try:
+        nodes = map(lambda e: e.value, etcd_client.list("services/agents"))
+
+        return jsonify({"nodes:" nodes})
+    except:
+        return api_error("Error during fetching agents/nodes from etcd", 500)

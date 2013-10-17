@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+if [ ! -d $APP_NAME ]; then
+    # download file from master, place it as app.js under some folder
+
+    node app.js
+fi

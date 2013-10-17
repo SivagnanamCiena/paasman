@@ -13,6 +13,9 @@ import random
 from gevent import wsgi
 import requests
 
+#import gevent.monkey
+#gevent.monkey.patch_socket()
+
 # TODO: sync this list via gevent and zeromq or other pub/sub
 #   or call the director for a list of urls and cache them in the process?
 apps = {
