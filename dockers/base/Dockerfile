@@ -30,4 +30,8 @@ RUN cd zeromq-2.2.0 && make && make install
 #ADD https://github.com/ahlen/paasman/archive/master.tar.gz paasman-src/
 #RUN cd paasman-src && tar -xzvf master.tar.gz --strip-components 1
 
-#RUN cd paasman-src && pip install -r requirements.txt
+# TEMP!!!
+
+ADD https://raw.github.com/ahlen/paasman/master/requirements.txt requirements.txt
+
+RUN pip install -r requirements.txt

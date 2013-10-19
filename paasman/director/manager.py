@@ -9,10 +9,13 @@
 import os
 import sys
 import datetime
+import re
 from werkzeug import secure_filename
 import boto
 import boto.ec2
 import gevent
+from gevent.queue import Queue
+from werkzeug import secure_filename
 
 from paasman import config
 from paasman.director.db import session_scope, session
@@ -20,6 +23,11 @@ from paasman.director import models
 from paasman.director import exceptions
 
 COREOS_IMAGE = "ami-00000003"
+name_re = re.compile("^([a-zA-Z]+)$")
+
+tasks = Queue()
+
+publish_queue = Queue()
 
 class AgentNode(object):
     def __init__(self, name, ip, updated_at):
@@ -34,6 +42,8 @@ class DirectorManager(object):
     """DirectorManager is responsible for handle the deployment of
     applications and manage the deployed instances.
     """
+
+    
 
     def __init__(self, storage_path):
         self._nodes = {}
@@ -81,6 +91,8 @@ class DirectorManager(object):
                 max_count=instances_count
             )
 
+            # TODO: we can skip all code below to wait on ip since we've changed our approach
+
             # wee need to run response.instances[0].update() until value is "running"
             #   to get the private ip address
 
@@ -105,27 +117,27 @@ class DirectorManager(object):
             raise exceptions.NodeCreationError(e.message)
         
 
-    def _store_instance_data(self, name, private_ip):
-        node = models.Node(
-            name=name,
-            private_ip=private_ip
-        )
-        session.add(node)
-        session.commit()
-        return node
+    def deploy_application(self, name, file, processes=1, instances=1):
+        """Upload the file to disk and deploys the application within the cluster"""
+        try:
+            file.save(os.path.join(self.storage_path, "%s.js" % name)) # store all uploads as appname.js
+            # TODO: put task on the worker queue to do some logic how this app should
+            #       be deployed in the cluster
+            tasks.put_nowait({
+                "task": "deploy",
+                "app_name": name,
+                # TODO: add nodes with deployment spec, like nodes: {"node_id-1": 5, "node_id-2": 3} will deploy
+                #       8 processes on 2 instances
+            })
 
-    def store_application(self, name, blob):
-        # TODO: impl.
-        #   - create folder per app name (_deployments/)
-        #   - create a timestamped folder or similar, like 201309301130 + ev. random
-        #   - create a symlink for current -> 201309301130
-        # or: just save the file as the application-name.js instead without versioning
-        return self.storage_path
+            return True
+        except IOError as e:
+            raise exceptions.AppUploadError(e)
 
-    def _get_deploy_dir(self, name, blob):
-        release_name = datetime.datetime.utcnow().strftime("%Y%m%d%H%M")
-        return os.path.join(self.storage_path, name, release_name)
+
+    def is_valid_appname(self, name):
+        return True if name_re.match(name) else False
 
     @property
-    def filename(self):
-        return self.storage_path
+    def is_healthy(self):
+        return True if self._nodes else False

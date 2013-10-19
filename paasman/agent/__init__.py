@@ -24,6 +24,8 @@ docker_client = docker.Client("unix://coreos_run/docker.sock")
 
 # tasks that should be sent to the master/director
 director_tasks = Queue()
+# tasks that should be performed via the docker api
+docker_tasks = Queue()
 
 def get_director_ip():
     """trying to get the director address to the master server (ZeroMQ)"""
@@ -37,7 +39,9 @@ def get_director_ip():
             gevent.sleep(0)
             return addr.value
 
+print "agent#get_director_ip-1"
 director_ip = get_director_ip()
+print "agent#get_director_ip-2"
 
 zmq_ctx = zmq.Context()
 subscriber = zmq_ctx.socket(zmq.SUB)
@@ -49,6 +53,18 @@ teller = zmq_ctx.socket(zmq.REQ)
 teller.connect("tcp://%s:5111" % director_ip)
 #teller.connect("tcp://172.17.42.1:5111") # 172.17.42.1 on a single node, change when clustering to to read key in etcd
 
+class Agent(object):
+    def __init__(self):
+        self._apps = {}
+        self._containers = {} # for fast lookups
+
+    def add_container(self, app_name, container_id):
+        self._apps = ""
+
+    def get_containers(self, app_name):
+        return self._apps.get(app_name, [])
+
+agent_manager = Agent()
 
 def event_listener():
     #print docker_client.info()
@@ -71,18 +87,12 @@ def subscriber_listener():
     while True:
         msg = subscriber.recv()
         print msg
-        # TODO: this just create instances of new containers to test how it works
-        container = docker_client.create_container(
-            image="paasman/apprunner",
-            command=["./paasman-node/runner.sh"],
-            environment={
-                "APP_NAME": "demo" # TODO: this should be the real appname!
-            }
-        )
-        docker_client.start(container.get("Id"))
-        print "Container with id=%s started!" % container.get("Id")
-
-        #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
+        task = json.loads(task)
+        task_type = task.get("task")
+        if task_type == "deploy":
+            docker_tasks.put_nowait(task) # just send the task dict
+        elif task_type == "undeploy":
+            docker_tasks.put_nowait(task) # just send the task dict 
         gevent.sleep(0)
 
 
@@ -108,10 +118,35 @@ def docker_listener():
 
 
 def docker_worker():
-    """Manage a queue and perform actions via the hosts docker remote api"""
+    """Manage a queue and perform actions via the hosts docker remote api
+
+    Note that this worker doesn't tell the director of the added or stopped/killed containers,
+    instead the docker_listener is responsible for that.
+    """
     while True:
         print "docker says hi!"
-        gevent.sleep(10)
+        task = docker_tasks.get()
+        task_type = task.get("task")
+        if task_type == "deploy":
+            app_name = task.get("app_name")
+            # TODO: this just create instances of new containers to test how it works
+            #       and atm just create a single container
+            container = docker_client.create_container(
+                image="paasman/apprunner",
+                command=["./paasman-node/runner.sh"],
+                environment={
+                    "APP_NAME": app_name
+                }
+            )
+            docker_client.start(container.get("Id"))
+            print "Container with id=%s started!" % container.get("Id")
+            agent_manager.add_container(app, container.get("Id"))
+        elif task_type == "undeploy":
+            app_name = task.get("app_name")
+            for c_id in agent_manager.get_containers(app_name):
+                docker_client.kill(c_id) # or stop? probably kill?
+        #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
+        gevent.sleep(0)
 
 
 
@@ -128,7 +163,7 @@ def agent_notifier_runner(host):
         try:
             r = etcd_client.set("services/agents/%s" % key, host, ttl=30)
             # TODO: wrap in try-except block?
-            gevent.sleep(14)
         except Exception as e:
             print "agent_notifier_runner:", e
+        gevent.sleep(14)
 

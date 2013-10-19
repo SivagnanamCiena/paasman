@@ -4,16 +4,13 @@ import gevent
 import zmq.green as zmq
 from gevent.queue import Queue
 import etcd
-from paasman.director import director_manager
+from paasman.director import director_manager, etcd_client
+from paasman.director.manager import tasks, publish_queue
 
 import gevent.monkey
 gevent.monkey.patch_socket() # make the tcp connection non-blocking
 
-tasks = Queue()
-
 zmq_ctx = zmq.Context()
-
-etcd_client = etcd.Etcd("172.17.42.1")
 
 def worker():
     """Worker that needs to be a singleton worker"""
@@ -30,7 +27,11 @@ def worker():
                 )
             if task_type == "delete_node":
                 director_manager.remove_node(task.get("name"))
-
+            if task_type == "deploy":
+                publish_queue.put_nowait({
+                    "task": "deploy",
+                    "app_name": task.get("app_name")
+                })
         gevent.sleep(0)
 
 def manager():
@@ -41,14 +42,17 @@ def manager():
         r = socket.recv()
         tasks.put_nowait(r)
         socket.send("you said %s" % r)
+        gevent.sleep(0)
 
 def test_publisher():
     publisher = zmq_ctx.socket(zmq.PUB)
     publisher.bind("tcp://*:5555")
 
     while True:
-        publisher.send("hallo")
-        gevent.sleep(30)
+        #publisher.send("hallo")
+        task = publish_queue.get()
+        publisher.send(json.dumps(task)) # maybe we need exception handling here (yes we do)
+        gevent.sleep(0)
 
 def cluster_listener():
     while True:
@@ -59,5 +63,6 @@ def cluster_listener():
                 "name": r.key.split("/")[-1],
                 "ip": r.value
             })
-        if r.action == "DELETE": # a node has gone away
+        elif r.action == "DELETE": # a node has gone away
             pass
+        gevent.sleep(0)

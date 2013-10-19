@@ -5,7 +5,6 @@ boto
 requests==1.2.0 # need 1.2.0 since docker-py...
 redis
 sqlalchemy
-#psycopg2 -- just use sqlite for this
 fabric
 etcd-py
 docker-py

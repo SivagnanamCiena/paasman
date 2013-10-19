@@ -1,10 +1,10 @@
-FROM ubuntu:12.04
+FROM paasman/paasman-src
 
 MAINTAINER paasman
 
 RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" > /etc/apt/sources.list
 RUN apt-get update
 
-ADD ../../ 
+#ADD ../../
 
 CMD ["/bin/echo", "hello this is paasman"]

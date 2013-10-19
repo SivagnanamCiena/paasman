@@ -8,37 +8,22 @@
 import sys
 import gevent
 from gevent import wsgi
-from paasman.director import app, manager
-
-from paasman.director import dispatcher
-from paasman.director.db import session, session_scope
-
-from sqlalchemy.exc import IntegrityError
+from paasman.director import manager, dispatcher
+from paasman.director.web import app
 
 if __name__ == "__main__":
+    # TODO: just tempororary, register the director in etcd under services/director.
+    import etcd
+    etcd_client = etcd.Etcd("172.17.42.1")
+    etcd_client.set("services/director", "10.0.0.10")
+
     wrker = gevent.spawn(dispatcher.worker)
     mangr = gevent.spawn(dispatcher.manager)
     clstr = gevent.spawn(dispatcher.cluster_listener)
     # tmp
-    t = gevent.spawn(dispatcher.test_publisher)
+    #t = gevent.spawn(dispatcher.test_publisher)
     #gevent.joinall([wrker, mangr, clstr])
     print "- started dispatcher worker"
-
-    if len(sys.argv) > 1:
-        from paasman.director.db import session_scope
-        # add the director server to the cluster
-        # (also used when we only use on instance for everything)
-        
-        try:
-            with session_scope():
-                node = manager._store_instance_data(
-                    name="paasman-master",
-                    private_ip=sys.argv[1] # assume the data is correct?
-                )
-                print "added node with name=%s and ip=%s" % (node.name, node.private_ip)
-        except IntegrityError as e:
-            print "The node name or private ip is already used, see following error message:"
-            print e
 
     print "- starting wsgi-server"
     wsgi.WSGIServer(("", 8001), app).serve_forever()
