@@ -40,7 +40,7 @@ def manager():
 
     while True:
         r = socket.recv()
-        tasks.put_nowait(r)
+        #tasks.put_nowait(r)
         socket.send("you said %s" % r)
         gevent.sleep(0)
 

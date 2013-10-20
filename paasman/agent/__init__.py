@@ -17,8 +17,7 @@ import requests
 import gevent.monkey
 gevent.monkey.patch_socket()
 
-# TODO: we should start the etcd process so we can follow leader, or?
-etcd_client = etcd.Etcd("172.17.42.1", follow_leader=True)
+etcd_client = etcd.Etcd("172.17.42.1")
 # we mount the coreos /var/ to /coreos_run/
 docker_client = docker.Client("unix://coreos_run/docker.sock")
 
@@ -41,16 +40,11 @@ def get_director_ip():
 
 print "agent#get_director_ip-1"
 director_ip = get_director_ip()
-print "agent#get_director_ip-2"
+print "agent#get_director_ip-2", director_ip
 
 zmq_ctx = zmq.Context()
-subscriber = zmq_ctx.socket(zmq.SUB)
-subscriber.connect("tcp://%s:5555" % director_ip)
-subscriber.setsockopt(zmq.SUBSCRIBE, "")
 #subscriber.connect("tcp://172.17.42.1:5555") # TODO: 172.17.42.1 on a single node, change when clustering to read key in etcd
 
-teller = zmq_ctx.socket(zmq.REQ)
-teller.connect("tcp://%s:5111" % director_ip)
 #teller.connect("tcp://172.17.42.1:5111") # 172.17.42.1 on a single node, change when clustering to to read key in etcd
 
 class Agent(object):
@@ -67,6 +61,10 @@ class Agent(object):
 agent_manager = Agent()
 
 def event_listener():
+    teller = zmq_ctx.socket(zmq.REQ)
+    teller.connect("tcp://%s:5111" % director_ip)
+    print "event_listener", director_ip
+
     #print docker_client.info()
     while True:
         try:
@@ -80,19 +78,24 @@ def event_listener():
             # but we should block on the director_tasks later
         except zmq.ZMQError as e:
             if e.errno == zmq.EAGAIN:
-                yield
-                # gevent.sleep(0)
+                gevent.sleep(0)
 
 def subscriber_listener():
+    subscriber = zmq_ctx.socket(zmq.SUB)
+    subscriber.connect("tcp://%s:5555" % director_ip)
+    subscriber.setsockopt(zmq.SUBSCRIBE, "")
+    print "subscriber_listener", director_ip
+
     while True:
+        print "subscriber_listen"
         msg = subscriber.recv()
         print msg
-        task = json.loads(task)
-        task_type = task.get("task")
-        if task_type == "deploy":
-            docker_tasks.put_nowait(task) # just send the task dict
-        elif task_type == "undeploy":
-            docker_tasks.put_nowait(task) # just send the task dict 
+        #task = json.loads(task)
+        #task_type = task.get("task")
+        #if task_type == "deploy":
+        #    docker_tasks.put_nowait(task) # just send the task dict
+        #elif task_type == "undeploy":
+        #    docker_tasks.put_nowait(task) # just send the task dict 
         gevent.sleep(0)
 
 
@@ -104,7 +107,7 @@ def docker_listener():
         try:
             response = docker_client.get(docker_client._url("/events"), stream=True)
             builder = []
-            for c in r.iter_content(1):
+            for c in response.iter_content(1):
                 builder.append(c)
                 if c == "}":
                     result = json.loads("".join(builder))
@@ -126,7 +129,9 @@ def docker_worker():
     while True:
         print "docker says hi!"
         task = docker_tasks.get()
+        print "docker_worker received work!"
         task_type = task.get("task")
+
         if task_type == "deploy":
             app_name = task.get("app_name")
             # TODO: this just create instances of new containers to test how it works
