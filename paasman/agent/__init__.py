@@ -90,7 +90,7 @@ def subscriber_listener():
         print "subscriber_listen"
         msg = subscriber.recv()
         print msg
-        task = json.loads(task)
+        task = json.loads(msg)
         task_type = task.get("task")
         if task_type == "deploy":
             docker_tasks.put_nowait(task) # just send the task dict
