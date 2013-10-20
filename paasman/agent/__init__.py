@@ -90,17 +90,17 @@ def subscriber_listener():
         print "subscriber_listen"
         msg = subscriber.recv()
         print msg
-        #task = json.loads(task)
-        #task_type = task.get("task")
-        #if task_type == "deploy":
-        #    docker_tasks.put_nowait(task) # just send the task dict
+        task = json.loads(task)
+        task_type = task.get("task")
+        if task_type == "deploy":
+            docker_tasks.put_nowait(task) # just send the task dict
         #elif task_type == "undeploy":
         #    docker_tasks.put_nowait(task) # just send the task dict 
         gevent.sleep(0)
 
 
 def docker_listener():
-    """Listen och events from docker to get notified when changes happen
+    """Listening on events from docker to get notified when changes happen
     to example handle stopped containers.
     """
     while True:
@@ -145,7 +145,7 @@ def docker_worker():
             )
             docker_client.start(container.get("Id"))
             print "Container with id=%s started!" % container.get("Id")
-            agent_manager.add_container(app, container.get("Id"))
+            agent_manager.add_container(app_name, container.get("Id"))
         elif task_type == "undeploy":
             app_name = task.get("app_name")
             for c_id in agent_manager.get_containers(app_name):
