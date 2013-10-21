@@ -6,6 +6,7 @@
     sanpet-8
 """
 
+from collections import defaultdict
 import os
 import sys
 import datetime
@@ -38,6 +39,28 @@ class AgentNode(object):
     def __repr__(self):
         return "Agent(%s, %s, %s)" % (self.name, self.ip, self.updated_at)
 
+class ApplicationState(object):
+    def __init__(self, name, state="undeployed"):
+        self.name = name
+        self.state = state
+        self._instances = []
+
+    def __repr__(self):
+        return "App(%s, %s)" % self.name, self.state
+
+    def add_instance(self, address):
+        """stores an address (ip:port) that the router can proxy to"""
+        self._instances.append(address)
+
+    def remove_instance(self, address):
+        if address in self._instances:
+            del self._instances[address]
+            return True
+        return False
+
+    def get_instances(self):
+        return self._instances
+
 class DirectorManager(object):
     """DirectorManager is responsible for handle the deployment of
     applications and manage the deployed instances.
@@ -47,6 +70,7 @@ class DirectorManager(object):
 
     def __init__(self, storage_path):
         self._nodes = {}
+        self._apps = {}
 
         self.storage_path = storage_path
 
@@ -59,6 +83,9 @@ class DirectorManager(object):
             port=8773,
             path="/services/Cloud"
         )
+
+    def get_nodes(self):
+        return self._nodes.itervalues()
 
     def add_node(self, name, ip):
         """Add node add or update a node in its list of known nodes in the cluster"""
@@ -129,10 +156,22 @@ class DirectorManager(object):
                 # TODO: add nodes with deployment spec, like nodes: {"node_id-1": 5, "node_id-2": 3} will deploy
                 #       8 processes on 2 instances
             })
+            self._apps[name] = ApplicationState(name, state="deployed")
 
             return True
         except IOError as e:
             raise exceptions.AppUploadError(e)
+
+    def undeploy_application(self, name):
+        if not name in self._apps:
+            return False
+
+        tasks.put_nowait({
+            "task": "undeploy",
+            "app_name": name
+        })
+        self._apps[name].state = "undeployed"
+        return True
 
 
     def is_valid_appname(self, name):

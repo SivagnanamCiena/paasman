@@ -26,13 +26,23 @@ def worker():
                     name=task.get("name"),
                     ip=task.get("ip")
                 )
-            if task_type == "delete_node":
+            elif task_type == "delete_node":
                 director_manager.remove_node(task.get("name"))
-            if task_type == "deploy":
+            elif task_type == "deploy":
                 publish_queue.put_nowait({
                     "task": "deploy",
                     "app_name": task.get("app_name")
                 })
+            elif task_type == "undeploy":
+                publish_queue.put_nowait({
+                    "task": "undeploy",
+                    "app_name": task.get("app_name")
+                })
+
+            # undeployed app
+            elif task_type == "undeployed":
+                print "undeployed (via agent)"
+                #director_manager.
         gevent.sleep(0)
 
 def manager():
@@ -40,12 +50,13 @@ def manager():
     socket.bind("tcp://*:5111")
 
     while True:
-        r = socket.recv()
-        #tasks.put_nowait(r)
-        socket.send("you said %s" % r)
+        msg = socket.recv()
+        message = json.loads(msg)
+        tasks.put_nowait(message)
+        socket.send("task put in director queue %s" % msg)
         gevent.sleep(0)
 
-def test_publisher():
+def cluster_publisher():
     publisher = zmq_ctx.socket(zmq.PUB)
     publisher.bind("tcp://*:5555")
 

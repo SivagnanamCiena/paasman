@@ -35,6 +35,14 @@ class PaasmanClient(object):
 
         print "uploading file %s for application %s" % (file, app)
 
+    def _undeploy(self, app):
+        """Undeploy the application in the paasman system"""
+        r = requests.delete(
+            self._build_url("/apps/%s/" % app),
+        )
+        print r.text
+        print "undeployed application %s" % app
+
     def run(self):
         """Handle the CLI to delegate to the correct method"""
         parser = argparse.ArgumentParser("paasman")
@@ -51,6 +59,9 @@ class PaasmanClient(object):
 
         vm_parser = subparsers.add_parser("add-runtime-vm", help="add-runtime-vm n")
         vm_parser.add_argument("instances", metavar="N", type=int, help="number of virtual machines to add to the cluster")
+
+        undeploy_parser = subparsers.add_parser("undeploy", help="undeploy appname")
+        undeploy_parser.add_argument("appname", type=str, help="the application name to undeploy")
  
         args = parser.parse_args()
         #print args
@@ -61,6 +72,8 @@ class PaasmanClient(object):
                 instances=args.instances,
                 processes=args.processes
            )
+        elif args.command == "undeploy":
+            self._undeploy(args.appname)
         else:
             print "add-runtime-vm is not implemented"
 

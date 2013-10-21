@@ -6,6 +6,7 @@
     sanpet-8
 """
 
+import json
 import hashlib
 import gevent
 from gevent.queue import Queue
@@ -53,7 +54,9 @@ class Agent(object):
         self._containers = {} # for fast lookups
 
     def add_container(self, app_name, container_id):
-        self._apps = ""
+        if not app_name in self._apps: self._apps[app_name] = []
+        self._apps[app_name].append(container_id)
+        self._containers[container_id] = app_name
 
     def get_containers(self, app_name):
         return self._apps.get(app_name, [])
@@ -68,17 +71,21 @@ def event_listener():
     #print docker_client.info()
     while True:
         try:
-            print "send to master"
-            teller.send("node is calling")
+            task = director_tasks.get()
+            print "send to master", task
+            teller.send(json.dumps(task))
             response = teller.recv() # blocking, wait on response from server
             # we may use timeout on recv and put the request to an internal queue and
             #   when the master response, we send the queued commands
             print "after response:", response
-            gevent.sleep(5) # wait 5 seconds since we doesn't want to send a flood of messages
+            #gevent.sleep(5) # wait 5 seconds since we doesn't want to send a flood of messages
             # but we should block on the director_tasks later
         except zmq.ZMQError as e:
             if e.errno == zmq.EAGAIN:
-                gevent.sleep(0)
+                gevent.sleep(0) # this isn't neccessary anymore...TODO: remove this.
+            print "event_listener-error:", e
+        finally:
+            gevent.sleep(0)
 
 def subscriber_listener():
     subscriber = zmq_ctx.socket(zmq.SUB)
@@ -94,8 +101,8 @@ def subscriber_listener():
         task_type = task.get("task")
         if task_type == "deploy":
             docker_tasks.put_nowait(task) # just send the task dict
-        #elif task_type == "undeploy":
-        #    docker_tasks.put_nowait(task) # just send the task dict 
+        elif task_type == "undeploy":
+            docker_tasks.put_nowait(task) # just send the task dict 
         gevent.sleep(0)
 
 
@@ -113,6 +120,8 @@ def docker_listener():
                     result = json.loads("".join(builder))
                     director_tasks.put_nowait(result)
                     print "put task in director_tasks"
+
+                    # TODO: rewrite the message to task-style!
                     builder = [] # reset
         except:
             pass
@@ -134,6 +143,12 @@ def docker_worker():
 
         if task_type == "deploy":
             app_name = task.get("app_name")
+
+            # we remove the existing containers for this app.
+            # TODO: change method when we allow cluster deploys
+            for c_id in agent_manager.get_containers(app_name):
+                docker_client.kill(c_id) # or stop? probably kill?
+
             # TODO: this just create instances of new containers to test how it works
             #       and atm just create a single container
             container = docker_client.create_container(
@@ -150,6 +165,10 @@ def docker_worker():
             app_name = task.get("app_name")
             for c_id in agent_manager.get_containers(app_name):
                 docker_client.kill(c_id) # or stop? probably kill?
+            director_tasks.put_nowait({
+                "task": "undeployed",
+                "app_name": app_name
+            })
         #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
         gevent.sleep(0)
 

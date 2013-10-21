@@ -21,7 +21,7 @@ if __name__ == "__main__":
     mangr = gevent.spawn(dispatcher.manager)
     clstr = gevent.spawn(dispatcher.cluster_listener)
     # tmp
-    t = gevent.spawn(dispatcher.test_publisher)
+    t = gevent.spawn(dispatcher.cluster_publisher)
     #gevent.joinall([wrker, mangr, clstr])
     print "- started dispatcher worker"
 
