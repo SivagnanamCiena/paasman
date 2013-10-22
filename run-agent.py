@@ -2,11 +2,13 @@
 
 import sys
 import gevent
-from paasman.agent import event_listener, agent_notifier_runner, docker_listener, docker_worker, subscriber_listener
+from paasman.agent import agent_manager, event_listener, agent_notifier_runner, docker_listener, docker_worker, subscriber_listener
 
 if __name__ == "__main__":
     host = "10.0.0.10" if len(sys.argv) < 2 else sys.argv[1]
     # TODO: change from 10.0.0.10 to read openstack local-ipv4
+
+    agent_manager.ip = host
 
     el = gevent.spawn(event_listener)
     notifier = gevent.spawn(agent_notifier_runner, host)

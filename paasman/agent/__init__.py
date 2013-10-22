@@ -49,7 +49,8 @@ zmq_ctx = zmq.Context()
 #teller.connect("tcp://172.17.42.1:5111") # 172.17.42.1 on a single node, change when clustering to to read key in etcd
 
 class Agent(object):
-    def __init__(self):
+    def __init__(self, ip=None):
+        self.ip = ip
         self._apps = {}
         self._containers = {} # for fast lookups
 
@@ -60,6 +61,9 @@ class Agent(object):
 
     def get_containers(self, app_name):
         return self._apps.get(app_name, [])
+
+    def get_app_by_container_id(self, container_id):
+        return self._containers.get(container_id)
 
 agent_manager = Agent()
 
@@ -118,10 +122,12 @@ def docker_listener():
                 builder.append(c)
                 if c == "}":
                     result = json.loads("".join(builder))
-                    director_tasks.put_nowait(result)
-                    print "put task in director_tasks"
-
-                    # TODO: rewrite the message to task-style!
+                    #director_tasks.put_nowait(result)
+                    docker_tasks.put_nowait({
+                        "task": "docker_event",
+                        "payload": result
+                    })
+                    print "put task in docker_tasks"
                     builder = [] # reset
         except:
             pass
@@ -169,6 +175,20 @@ def docker_worker():
                 "task": "undeployed",
                 "app_name": app_name
             })
+        elif task_type == "docker_event":
+            print "docker_task:", task
+            docker_task = task.get("payload")
+            if docker_task.get("status") == "start" and docker_task.get("from") == "paasman/apprunner:latest":
+                app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
+
+                exposed_port = docker_client.port(container, "80")
+                uri = "http://%s:%s" % (agent_manager.ip, exposed_port)
+
+                director_tasks.put_nowait({
+                    "task": "add_process",
+                    "app_name": app_name,
+                    "uri": uri
+                })
         #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
         gevent.sleep(0)
 

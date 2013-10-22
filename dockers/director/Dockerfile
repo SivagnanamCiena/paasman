@@ -30,7 +30,7 @@ MAINTAINER paasman
 # 5555 for the publishing zeromq socket
 # 5111 for the server(rep) zeromq socket
 # 8001 for the directors RESTful API
-EXPOSE 5555 5111 8001
+EXPOSE 5555 5222 5111 8001
 
 #ENTRYPOINT ["python", "paasman-src/wsgi-director.py"]
 

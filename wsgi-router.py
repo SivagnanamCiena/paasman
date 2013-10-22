@@ -10,4 +10,4 @@ from gevent import wsgi
 from paasman.router import router as app
 
 if __name__ == "__main__":
-    wsgi.WSGIServer(("", 8000), app).serve_forever()
+    wsgi.WSGIServer(("", 80), app).serve_forever()

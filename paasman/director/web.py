@@ -84,5 +84,5 @@ def get_cluster_nodes():
 
 @app.route("/_paasman/apps/")
 def get_apps():
-    return jsonify({"apps": {app_name: {"state": app.state, "processes": app.get_instances()} for app_name, app in director_manager._apps.items()}})
+    return jsonify({"apps": {app_name: {"state": app.state, "processes": app.get_processes()} for app_name, app in director_manager._apps.items()}})
     #return jsonify({"apps": map(lambda app: {app.name: app.get_instances()}, director_manager._apps.itervalues())})

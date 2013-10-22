@@ -43,23 +43,24 @@ class ApplicationState(object):
     def __init__(self, name, state="undeployed"):
         self.name = name
         self.state = state
-        self._instances = []
+        self._processes = []
+        #self._container_ids = {}
 
     def __repr__(self):
         return "App(%s, %s)" % self.name, self.state
 
-    def add_instance(self, address):
+    def add_process(self, address):
         """stores an address (ip:port) that the router can proxy to"""
-        self._instances.append(address)
+        self._processes.append(address)
 
-    def remove_instance(self, address):
-        if address in self._instances:
-            del self._instances[address]
+    def remove_process(self, address):
+        if address in self._processes:
+            del self._processes[address]
             return True
         return False
 
-    def get_instances(self):
-        return self._instances
+    def get_processes(self):
+        return self._processes
 
 class DirectorManager(object):
     """DirectorManager is responsible for handle the deployment of
@@ -173,6 +174,8 @@ class DirectorManager(object):
         self._apps[name].state = "undeployed"
         return True
 
+    def get_application(self, name):
+        return self._apps.get(name)
 
     def is_valid_appname(self, name):
         return True if name_re.match(name) else False

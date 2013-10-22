@@ -38,11 +38,18 @@ def worker():
                     "task": "undeploy",
                     "app_name": task.get("app_name")
                 })
-
             # undeployed app
             elif task_type == "undeployed":
                 print "undeployed (via agent)"
                 #director_manager.
+            elif task_type == "add_process":
+                app = director_manager.get_application(task.get("app_name"))
+                if not app:
+                    print "add_process:", "The application %s doesn't exists" % task.get("app_name", "?")
+                app.add_process(task.get("uri"))
+            elif task_type == "remove_process":
+                pass
+
         gevent.sleep(0)
 
 def manager():
@@ -77,4 +84,17 @@ def cluster_listener():
             })
         elif r.action == "DELETE": # a node has gone away
             pass
+        gevent.sleep(0)
+
+def router_uri_responder():
+    socket = zmq_ctx.socket(zmq.REP)
+    socket.bind("tcp://*:5222")
+
+    while True:
+        app_name = socket.recv()
+        app = director_manager.get_application(app_name)
+        if app:
+            socket.send(random.choice(app._processes))
+        else:
+            socket.send(None)
         gevent.sleep(0)

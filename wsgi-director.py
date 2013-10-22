@@ -20,6 +20,7 @@ if __name__ == "__main__":
     wrker = gevent.spawn(dispatcher.worker)
     mangr = gevent.spawn(dispatcher.manager)
     clstr = gevent.spawn(dispatcher.cluster_listener)
+    router_uri = gevent.spawn(dispatcher.router_uri_responder)
     # tmp
     t = gevent.spawn(dispatcher.cluster_publisher)
     #gevent.joinall([wrker, mangr, clstr])

@@ -8,6 +8,7 @@
 
 # inspiration from https://github.com/rtyler/proxylet/blob/master/proxylet.py
 
+import zmq.green as zmq
 import urlparse
 import random
 from gevent import wsgi
@@ -18,16 +19,27 @@ import requests
 
 # TODO: sync this list via gevent and zeromq or other pub/sub
 #   or call the director for a list of urls and cache them in the process?
-apps = {
-    "dev": [
-        "http://10.10.10.25:8123",
-        "http://10.10.10.25:8124"
-    ]
-}
+#apps = {
+#    "dev": [
+#        "http://10.10.10.25:8123",
+#        "http://10.10.10.25:8124"
+#    ]
+#}
 
 proxy_headers = (
     "HTTP_USER_AGENT", "HTTP_ACCEPT_CHARSET", "HTTP_ACCEPT", "HTTP_ACCEPT_LANGUAGE"
 )
+
+zmq_ctx = zmq.Context()
+socket = zmq_ctx.socket(zmq.REQ)
+socket.connect("tcp://10.0.0.10:5222")
+
+def get_app_uri(name):
+    #socket.send(name)
+    #uri = socket.recv()
+    #print "get_app_uri:", uri
+    #return uri
+    return "10.0.0.10:"
 
 def router(env, start_response):
     if env.get("REQUEST_METHOD", None) == "GET":
@@ -37,12 +49,12 @@ def router(env, start_response):
     return ["Proxy only allows GET"]
 
 def proxy(env, start_response):
-    app = apps.get(get_appname(env.get("HTTP_HOST", None)), None)
+    app = get_app_uri(get_appname(env.get("HTTP_HOST", None)))
     if not app:
         start_response("404 Not Found", [("Content-Type", "text/html")])
         return ["App with name \"%s\" not found" % get_appname(env.get("HTTP_HOST", "?"))]
     # call one of the servers
-    destination = random.choice(app)
+    destination = app#random.choice(app) # TODO: rewrite this
 
     path = env.get("REQUEST_INFO", "/")
     headers = dict(((k, env[k]) for k in proxy_headers if env.has_key(k)))
