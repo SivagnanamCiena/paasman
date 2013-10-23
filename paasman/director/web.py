@@ -40,8 +40,8 @@ def deploy_app():
         if not director_manager.is_valid_appname(appname):
             return "Only a-z and A-Z letters are valid" # TODO: use api_error
         #TODO: use manager.store_application()
-        processes = request.form.get("processes", 1)
-        instances = request.form.get("instances", 1)
+        processes = int(request.form.get("processes", 1))
+        instances = int(request.form.get("instances", 1))
         try:
             deployment = director_manager.deploy_application(appname, appfile, processes, instances)
             if deployment:

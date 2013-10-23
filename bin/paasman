@@ -26,6 +26,9 @@ class PaasmanClient(object):
             print "Could not open or read the file, check that the file exists"
         else:
             # successfully read the file
+            if processes == "auto": processes = 0
+            if instances == "auto": instances = 0
+
             r = requests.post(
                 self._build_url("/apps/"),
                 files={"file": f},
