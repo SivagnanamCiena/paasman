@@ -1,0 +1,10 @@
+[Unit]
+Description=Clustered etcd
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker run -p 8001:8001 -p 5555:5555 -p 5222:5222 -p 5111:5111 paasman/production python wsgi-director.py
+
+[Install]
+WantedBy=local.target

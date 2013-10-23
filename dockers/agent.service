@@ -1,0 +1,10 @@
+[Unit]
+Description=Clustered etcd
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker run -v /run/:/coreos_run/ paasman/production python run-agent.py
+
+[Install]
+WantedBy=local.target

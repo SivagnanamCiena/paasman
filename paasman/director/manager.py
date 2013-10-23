@@ -46,6 +46,9 @@ class ApplicationState(object):
     def __init__(self, name, state="undeployed", processes=1, instances=1):
         self.name = name
         self.state = state
+        self.processes = processes
+        self.instances = instances
+
         self._processes = []
         self._container_ids = {}
 
@@ -161,6 +164,7 @@ class DirectorManager(object):
                 for processes in xrange(processes):
                     nodes[node_cycle.next()] += 1
             else:
+                nodes = []
                 print "More instances than running, not implemented yet!"
 
             task = {

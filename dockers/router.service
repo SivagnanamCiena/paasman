@@ -1,0 +1,10 @@
+[Unit]
+Description=Clustered etcd
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker run -p 80:80 paasman/production python wsgi-router.py
+
+[Install]
+WantedBy=local.target

@@ -87,7 +87,7 @@ class PaasmanClient(object):
             #print "add-runtime-vm is not implemented"
 
 if __name__ == "__main__":
-    #HOST = "http://127.0.0.1:8001/"
-    HOST = "http://10.0.0.10:8001/"
+    HOST = "http://130.240.233.91:8001/"
+    #HOST = "http://10.0.0.10:8001/"
     client = PaasmanClient(HOST)
     client.run()

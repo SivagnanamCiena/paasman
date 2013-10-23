@@ -32,7 +32,7 @@ proxy_headers = (
 
 zmq_ctx = zmq.Context()
 socket = zmq_ctx.socket(zmq.REQ)
-socket.connect("tcp://10.0.0.10:5222")
+socket.connect("tcp://10.0.0.11:5222") # TODO: use /services/director
 
 def get_app_uri(name):
     socket.send(name)
