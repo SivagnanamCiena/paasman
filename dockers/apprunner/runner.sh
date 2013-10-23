@@ -6,16 +6,7 @@ echo "yeah"
 if [ ! -d $APP_NAME ]; then
     # download file from master, place it as app.js under some folder
 
-echo "
-var http = require('http');
-//var process = require('process');
-var server = http.createServer(function (request, response) {
-    response.writeHead(200, {\"Content-Type\": \"text/plain\"});
-    response.end(\"Hello World\n\");
-});
-
-server.listen(80);
-" >> app.js
+echo `curl http://10.0.0.10:8001/apps/${APP_NAME}/download/`  >> app.js
 
     node app.js
 fi

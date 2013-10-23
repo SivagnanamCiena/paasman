@@ -43,6 +43,14 @@ class PaasmanClient(object):
         print r.text
         print "undeployed application %s" % app
 
+    def _add_vm_instances(self, instances):
+        print "Trying to add %d new instances to the cluster" % instances
+        r = requests.post(
+            self._build_url("/instances/"),
+            data={"instances": instances}
+        )
+        print r.text
+
     def run(self):
         """Handle the CLI to delegate to the correct method"""
         parser = argparse.ArgumentParser("paasman")
@@ -74,8 +82,9 @@ class PaasmanClient(object):
            )
         elif args.command == "undeploy":
             self._undeploy(args.appname)
-        else:
-            print "add-runtime-vm is not implemented"
+        elif args.command == "add-runtime-vm":
+            self._add_vm_instances(args.instances)
+            #print "add-runtime-vm is not implemented"
 
 if __name__ == "__main__":
     #HOST = "http://127.0.0.1:8001/"

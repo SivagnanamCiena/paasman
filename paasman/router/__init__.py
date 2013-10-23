@@ -35,11 +35,10 @@ socket = zmq_ctx.socket(zmq.REQ)
 socket.connect("tcp://10.0.0.10:5222")
 
 def get_app_uri(name):
-    #socket.send(name)
-    #uri = socket.recv()
-    #print "get_app_uri:", uri
-    #return uri
-    return "10.0.0.10:"
+    socket.send(name)
+    uri = socket.recv()
+    print "get_app_uri:", uri
+    return uri
 
 def router(env, start_response):
     if env.get("REQUEST_METHOD", None) == "GET":
@@ -52,7 +51,7 @@ def proxy(env, start_response):
     app = get_app_uri(get_appname(env.get("HTTP_HOST", None)))
     if not app:
         start_response("404 Not Found", [("Content-Type", "text/html")])
-        return ["App with name \"%s\" not found" % get_appname(env.get("HTTP_HOST", "?"))]
+        return ["App with name \"%s\" not found or not deployed" % get_appname(env.get("HTTP_HOST", "?"))]
     # call one of the servers
     destination = app#random.choice(app) # TODO: rewrite this
 

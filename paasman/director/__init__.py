@@ -14,4 +14,4 @@ gevent.monkey.patch_socket()
 
 etcd_client = etcd.Etcd("172.17.42.1")
 
-director_manager = DirectorManager("_deployments/")
+director_manager = DirectorManager("/_deployments/")

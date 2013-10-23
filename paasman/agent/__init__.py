@@ -187,7 +187,15 @@ def docker_worker():
                 director_tasks.put_nowait({
                     "task": "add_process",
                     "app_name": app_name,
-                    "uri": uri
+                    "uri": uri,
+                    "container_id": docker_task.get("id")
+                })
+            elif docker_task.get("status") == "kill" and docker_task.get("from") == "paasman/apprunner:latest":
+                app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
+                director_tasks.put_nowait({
+                    "task": "remove_process",
+                    "app_name": app_name,
+                    "container_id": docker_task.get("id")
                 })
         #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
         gevent.sleep(0)

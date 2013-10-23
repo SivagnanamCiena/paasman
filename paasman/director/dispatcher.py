@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import random
 import json
 import gevent
 import zmq.green as zmq
@@ -46,9 +47,14 @@ def worker():
                 app = director_manager.get_application(task.get("app_name"))
                 if not app:
                     print "add_process:", "The application %s doesn't exists" % task.get("app_name", "?")
-                app.add_process(task.get("uri"))
+                    return
+                app.add_process(task.get("uri"), task.get("container_id"))
             elif task_type == "remove_process":
-                pass
+                app = director_manager.get_application(task.get("app_name"))
+                if not app:
+                    print "remove_process:", "the application %s doesn't exists" % task.get("app_name", "?")
+                    return
+                app.remove_process(task.get("container_id"))
 
         gevent.sleep(0)
 
@@ -94,7 +100,7 @@ def router_uri_responder():
         app_name = socket.recv()
         app = director_manager.get_application(app_name)
         if app:
-            socket.send(random.choice(app._processes))
+            socket.send(str(random.choice(app._processes)))
         else:
-            socket.send(None)
+            socket.send("")
         gevent.sleep(0)

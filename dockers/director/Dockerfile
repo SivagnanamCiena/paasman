@@ -34,4 +34,6 @@ EXPOSE 5555 5222 5111 8001
 
 #ENTRYPOINT ["python", "paasman-src/wsgi-director.py"]
 
+RUN mkdir /_deployments/
+
 CMD ["/bin/bash"]

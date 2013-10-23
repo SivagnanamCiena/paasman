@@ -6,7 +6,7 @@
     sanpet-8
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from paasman.director.db import session
 from paasman.director import director_manager, etcd_client
 
@@ -25,9 +25,12 @@ def api_error(message, status=400):
 
 @app.route("/apps/", methods=["GET"])
 def list_apps():
-    #dispatcher.tasks.put_nowait("hello!")
-
-    return "added to queue"
+    apps = filter(lambda app: app.state == "deployed", director_manager._apps.values())
+    return jsonify({
+        "applications": map(lambda app: {"name": app.name, "id": app.id}, apps)
+    })
+    #apps = filter(lambda app: app.state == "deployed", director_manager._apps.values())
+    #return jsonify(apps)
 
 @app.route("/apps/", methods=["POST"])
 def deploy_app():
@@ -71,7 +74,16 @@ def delete_app(app_name):
 @app.route("/apps/<name>/download/", methods=["GET"])
 def download_appfile(name):
     # TODO: return the file for the asked app, used by a docker file that fetch the file to run
-    return "No file"
+    return send_file(director_manager.get_application_file(name))
+
+@app.route("/instances/", methods=["POST"])
+def add_vm_instance():
+    instance_count = int(request.form.get("instances"))
+
+    instances = director_manager.add_vm_instances(instance_count)
+    return jsonify({
+        "instances": map(lambda instance: instance.private_ip_address, instances)
+    })
 
 @app.route("/_paasman/nodes/", methods=["GET"])
 def get_cluster_nodes():
@@ -84,5 +96,5 @@ def get_cluster_nodes():
 
 @app.route("/_paasman/apps/")
 def get_apps():
-    return jsonify({"apps": {app_name: {"state": app.state, "processes": app.get_processes()} for app_name, app in director_manager._apps.items()}})
+    return jsonify({"apps": {app_name: {"id": app.id,"state": app.state, "processes": app.get_processes()} for app_name, app in director_manager._apps.items()}})
     #return jsonify({"apps": map(lambda app: {app.name: app.get_instances()}, director_manager._apps.itervalues())})

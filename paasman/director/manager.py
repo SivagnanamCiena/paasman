@@ -39,23 +39,34 @@ class AgentNode(object):
     def __repr__(self):
         return "Agent(%s, %s, %s)" % (self.name, self.ip, self.updated_at)
 
+APP_ID_COUNTER = 0
+
 class ApplicationState(object):
+    
+
     def __init__(self, name, state="undeployed"):
+        global APP_ID_COUNTER
+
+        APP_ID_COUNTER += 1
+        self.id = APP_ID_COUNTER
         self.name = name
         self.state = state
         self._processes = []
-        #self._container_ids = {}
+        self._container_ids = {}
 
     def __repr__(self):
-        return "App(%s, %s)" % self.name, self.state
+        return "App(%s, %s, %s)" % (self.id, self.name, self.state)
 
-    def add_process(self, address):
+    def add_process(self, address, container_id):
         """stores an address (ip:port) that the router can proxy to"""
         self._processes.append(address)
+        self._container_ids[container_id] = address
 
-    def remove_process(self, address):
-        if address in self._processes:
-            del self._processes[address]
+    def remove_process(self, container_id):
+        if container_id in self._container_ids:
+            uri = self._container_ids.get(container_id)
+            self._processes.remove(uri)
+            del self._container_ids[container_id]
             return True
         return False
 
@@ -132,15 +143,6 @@ class DirectorManager(object):
                     gevent.sleep(0.2)
 
             return response.instances
-
-            if len(response.instances) > 0:
-                nodes = []
-                #for instance in response.instances:
-                #    nodes.append(self._store_instance_data(
-                #        response.instances[0].dns_name,
-                #        response.instances[0].private_ip_address
-                #    ))
-                return nodes
         except Exception as e: # TODO: check exception type?
             raise exceptions.NodeCreationError(e.message)
         
@@ -173,6 +175,9 @@ class DirectorManager(object):
         })
         self._apps[name].state = "undeployed"
         return True
+
+    def get_application_file(self, name):
+        return open(os.path.join(self.storage_path, "%s.js" % name))
 
     def get_application(self, name):
         return self._apps.get(name)
