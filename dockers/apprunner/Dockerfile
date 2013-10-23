@@ -2,7 +2,7 @@ FROM paasman/nodebase
 
 MAINTAINER paasman
 
-ADD container.js /paasman-node/container.js
+#ADD container.js /paasman-node/container.js
 ADD runner.sh /paasman-node/runner.sh
 
 RUN chmod +x /paasman-node/runner.sh

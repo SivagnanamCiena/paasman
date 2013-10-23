@@ -9,6 +9,7 @@
 from collections import defaultdict
 import os
 import sys
+import itertools
 import datetime
 import re
 from werkzeug import secure_filename
@@ -19,8 +20,8 @@ from gevent.queue import Queue
 from werkzeug import secure_filename
 
 from paasman import config
-from paasman.director.db import session_scope, session
-from paasman.director import models
+#from paasman.director.db import session_scope, session
+#from paasman.director import models
 from paasman.director import exceptions
 
 COREOS_IMAGE = "ami-00000003"
@@ -39,16 +40,10 @@ class AgentNode(object):
     def __repr__(self):
         return "Agent(%s, %s, %s)" % (self.name, self.ip, self.updated_at)
 
-APP_ID_COUNTER = 0
-
 class ApplicationState(object):
     
 
-    def __init__(self, name, state="undeployed"):
-        global APP_ID_COUNTER
-
-        APP_ID_COUNTER += 1
-        self.id = APP_ID_COUNTER
+    def __init__(self, name, state="undeployed", processes=1, instances=1):
         self.name = name
         self.state = state
         self._processes = []
@@ -63,11 +58,16 @@ class ApplicationState(object):
         self._container_ids[container_id] = address
 
     def remove_process(self, container_id):
-        if container_id in self._container_ids:
-            uri = self._container_ids.get(container_id)
+        uri = self._container_ids.get(container_id)
+        if uri:
             self._processes.remove(uri)
             del self._container_ids[container_id]
             return True
+        #if container_id in self._container_ids:
+        #    uri = self._container_ids.get(container_id)
+        #    self._processes.remove(uri)
+        #    del self._container_ids[container_id]
+        #    return True
         return False
 
     def get_processes(self):
@@ -153,13 +153,26 @@ class DirectorManager(object):
             file.save(os.path.join(self.storage_path, "%s.js" % name)) # store all uploads as appname.js
             # TODO: put task on the worker queue to do some logic how this app should
             #       be deployed in the cluster
-            tasks.put_nowait({
+
+            # spread this app equal in the cluster
+            if len(self._nodes) >= instances:
+                nodes = {node.ip: 0 for node in self._nodes.values()}
+                node_cycle = itertools.cycle(nodes)
+                for processes in xrange(processes):
+                    nodes[node_cycle.next()] += 1
+            else:
+                print "More instances than running, not implemented yet!"
+
+            task = {
                 "task": "deploy",
                 "app_name": name,
+                "deploy_instruction": nodes,
                 # TODO: add nodes with deployment spec, like nodes: {"node_id-1": 5, "node_id-2": 3} will deploy
                 #       8 processes on 2 instances
-            })
-            self._apps[name] = ApplicationState(name, state="deployed")
+            }
+
+            tasks.put_nowait(task)
+            self._apps[name] = ApplicationState(name, state="deployed", processes=processes, instances=instances)
 
             return True
         except IOError as e:

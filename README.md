@@ -21,10 +21,10 @@ To start a (node.js) application:
 $ docker run -e APP_NAME=mikael -d -i -t paasman/apprunner
 
 To start the director and routers dev-suit:
-$ docker run -v /run/:/coreos_run/ -p 80:80 -p 8001:8001 -p 5555:5555 -p 5222:5222 -p 5111:5111 -i -t paasman/dev /bin/bash
+$ docker run -p 80:80 -p 8001:8001 -p 5555:5555 -p 5222:5222 -p 5111:5111 -i -t paasman/dev /bin/bash
 
 To start the agents dev-suit
-$ docker run -i -t paasman/dev /bin/bash
+$ docker run -v /run/:/coreos_run/ -i -t paasman/dev /bin/bash
 
 Architecture
 ------------

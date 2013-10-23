@@ -32,7 +32,8 @@ def worker():
             elif task_type == "deploy":
                 publish_queue.put_nowait({
                     "task": "deploy",
-                    "app_name": task.get("app_name")
+                    "app_name": task.get("app_name"),
+                    "deploy_instruction": task.get("deploy_instruction")
                 })
             elif task_type == "undeploy":
                 publish_queue.put_nowait({
@@ -74,7 +75,6 @@ def cluster_publisher():
     publisher.bind("tcp://*:5555")
 
     while True:
-        #publisher.send("hallo")
         task = publish_queue.get()
         publisher.send(json.dumps(task)) # maybe we need exception handling here (yes we do)
         gevent.sleep(0)
@@ -99,7 +99,7 @@ def router_uri_responder():
     while True:
         app_name = socket.recv()
         app = director_manager.get_application(app_name)
-        if app:
+        if app and app.state == "deployed":
             socket.send(str(random.choice(app._processes)))
         else:
             socket.send("")

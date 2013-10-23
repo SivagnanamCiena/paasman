@@ -7,14 +7,14 @@
 """
 
 from flask import Flask, request, jsonify, send_from_directory, send_file
-from paasman.director.db import session
+#from paasman.director.db import session
 from paasman.director import director_manager, etcd_client
 
 app = Flask(__name__)
 
-@app.teardown_appcontext
-def remove_db_session(exception=None):
-    session.remove()
+#@app.teardown_appcontext
+#def remove_db_session(exception=None):
+#    session.remove()
 
 def api_error(message, status=400):
     return jsonify(
@@ -27,10 +27,8 @@ def api_error(message, status=400):
 def list_apps():
     apps = filter(lambda app: app.state == "deployed", director_manager._apps.values())
     return jsonify({
-        "applications": map(lambda app: {"name": app.name, "id": app.id}, apps)
+        "applications": map(lambda app: {"name": app.name}, apps)
     })
-    #apps = filter(lambda app: app.state == "deployed", director_manager._apps.values())
-    #return jsonify(apps)
 
 @app.route("/apps/", methods=["POST"])
 def deploy_app():
@@ -42,8 +40,10 @@ def deploy_app():
         if not director_manager.is_valid_appname(appname):
             return "Only a-z and A-Z letters are valid" # TODO: use api_error
         #TODO: use manager.store_application()
+        processes = request.form.get("processes", 1)
+        instances = request.form.get("instances", 1)
         try:
-            deployment = director_manager.deploy_application(appname, appfile)
+            deployment = director_manager.deploy_application(appname, appfile, processes, instances)
             if deployment:
                 return "Successfully deployed the application %s" % appname # TOOD: tell how to visit on appname.domain...
             return "Error during upload#1"
@@ -54,9 +54,17 @@ def deploy_app():
         #return appfile.filename
     return "No file?"
 
-@app.route("/apps/<int:id>/", methods=["GET"])
-def app_state(id):
-    return ""
+@app.route("/apps/<string:name>/", methods=["GET"])
+def app_state(name):
+    app = director_manager.get_application(name)
+    if not app:
+        return api_error("No app named %s" % name)
+    return jsonify({
+        "application": {
+            "name": app.name,
+            "uris": app.get_processes()
+        }
+    })
 
 @app.route("/apps/<int:id>/", methods=["PUT"])
 def edit_app(id):

@@ -157,16 +157,20 @@ def docker_worker():
 
             # TODO: this just create instances of new containers to test how it works
             #       and atm just create a single container
-            container = docker_client.create_container(
-                image="paasman/apprunner",
-                command=["./paasman-node/runner.sh"],
-                environment={
-                    "APP_NAME": app_name
-                }
-            )
-            docker_client.start(container.get("Id"))
-            print "Container with id=%s started!" % container.get("Id")
-            agent_manager.add_container(app_name, container.get("Id"))
+            deploy_instruction = task.get("deploy_instruction")
+            print "deploy_instruction", task
+            processes = deploy_instruction.get(agent_manager.ip)
+            if processes:
+                for x in xrange(processes):
+                    container = docker_client.create_container(
+                        image="paasman/apprunner",
+                        command=["./paasman-node/runner.sh"],
+                        environment={
+                        "APP_NAME": app_name
+                    })
+                    docker_client.start(container.get("Id"))
+                    print "Container with id=%s started!" % container.get("Id")
+                    agent_manager.add_container(app_name, container.get("Id"))
         elif task_type == "undeploy":
             app_name = task.get("app_name")
             for c_id in agent_manager.get_containers(app_name):
@@ -181,7 +185,7 @@ def docker_worker():
             if docker_task.get("status") == "start" and docker_task.get("from") == "paasman/apprunner:latest":
                 app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
 
-                exposed_port = docker_client.port(container, "80")
+                exposed_port = docker_client.port(docker_task.get("id"), "80")
                 uri = "http://%s:%s" % (agent_manager.ip, exposed_port)
 
                 director_tasks.put_nowait({
@@ -214,8 +218,10 @@ def agent_notifier_runner(host):
     while True:
         try:
             r = etcd_client.set("services/agents/%s" % key, host, ttl=30)
+            gevent.sleep(14)
             # TODO: wrap in try-except block?
         except Exception as e:
             print "agent_notifier_runner:", e
-        gevent.sleep(14)
+            gevent.sleep(0)
+        
 

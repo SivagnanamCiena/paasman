@@ -2,10 +2,11 @@
 
 import sys
 import gevent
+import requests
 from paasman.agent import agent_manager, event_listener, agent_notifier_runner, docker_listener, docker_worker, subscriber_listener
 
 if __name__ == "__main__":
-    host = "10.0.0.10" if len(sys.argv) < 2 else sys.argv[1]
+    host = requests.get("http://169.254.169.254/latest/meta-data/local-ipv4").text if len(sys.argv) < 2 else sys.argv[1]
     # TODO: change from 10.0.0.10 to read openstack local-ipv4
 
     agent_manager.ip = host

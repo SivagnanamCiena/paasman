@@ -29,7 +29,7 @@ class PaasmanClient(object):
             r = requests.post(
                 self._build_url("/apps/"),
                 files={"file": f},
-                data={"app": app}
+                data={"app": app, "instances": instances, "processes": processes}
             )
             print "uploaded: ", r.text
 
