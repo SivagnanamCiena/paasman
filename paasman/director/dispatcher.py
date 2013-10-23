@@ -57,8 +57,8 @@ def worker():
                 app = director_manager.get_application(task.get("app_name"))
                 if not app:
                     print "remove_process:", "the application %s doesn't exists" % task.get("app_name", "?")
-                    return
-                app.remove_process(task.get("container_id"))
+                else:
+                    app.remove_process(task.get("container_id"))
             elif task_type == "upscale":
                 # upscale, app_name, 
                 app_name = task.get("app_name")
