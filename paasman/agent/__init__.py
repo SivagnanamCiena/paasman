@@ -149,11 +149,13 @@ def docker_worker():
 
         if task_type == "deploy":
             app_name = task.get("app_name")
+            remove = task.get("remove")
 
-            # we remove the existing containers for this app.
-            # TODO: change method when we allow cluster deploys
-            for c_id in agent_manager.get_containers(app_name):
-                docker_client.kill(c_id) # or stop? probably kill?
+            if remove:
+                # we remove the existing containers for this app.
+                # TODO: change method when we allow cluster deploys
+                for c_id in agent_manager.get_containers(app_name):
+                  docker_client.kill(c_id) # or stop? probably kill?
 
             # TODO: this just create instances of new containers to test how it works
             #       and atm just create a single container

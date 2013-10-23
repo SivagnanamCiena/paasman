@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import collections
 import random
 import json
 import gevent
+import hashlib
 import zmq.green as zmq
 from gevent.queue import Queue
 import etcd
@@ -32,6 +34,7 @@ def worker():
             elif task_type == "deploy":
                 publish_queue.put_nowait({
                     "task": "deploy",
+                    "remove": True,
                     "app_name": task.get("app_name"),
                     "deploy_instruction": task.get("deploy_instruction")
                 })
@@ -56,6 +59,56 @@ def worker():
                     print "remove_process:", "the application %s doesn't exists" % task.get("app_name", "?")
                     return
                 app.remove_process(task.get("container_id"))
+            elif task_type == "upscale":
+                # upscale, app_name, 
+                app_name = task.get("app_name")
+                app = director_manager.get_application(app_name)
+                processes = app.get_processes()
+                nodes = max(len(director_manager.get_nodes()), 1)
+
+                def _wait_on_agent(app_name, ip):
+                    try:
+                        print "_wait_on_agent-1"
+                        r = etcd_client.watch("services/agents/%s" % hashlib.sha1(ip).hexdigest(), timeout=60)
+                        print "_wait_on_agent-2"
+                        for x in xrange(3):
+                            tasks.put_nowait({
+                                "task": "add_min_instance_processes",
+                                "app_name": app_name,
+                                "target": ip
+                            })
+                    except:
+                        return
+
+                if True:#len(processes)/nodes > 10 and nodes < 4:
+                    instances = director_manager.add_vm_instances(1)
+                    gevent.spawn(_wait_on_agent, app_name, instances[0].private_ip_address)
+                else: # TODO: fix unlimited...
+                    tasks.put_nowait({
+                        "task": "add_min_instance_processes",
+                        "app_name": app_name,
+                        "target": None,
+                    })
+            elif task_type == "add_min_instance_processes":
+                app_name = task.get("app_name")
+                deploy_target = task.get("target")
+
+                if not deploy_target:
+                    app = director_manager.get_application(app_name)
+                    processes = app.get_processes()
+
+                    nodes = {ip: 0 for ip in director_manager.get_nodes()}
+                    for x in processes:
+                        nodes[x.split(":")[0]] += 1
+                    deploy_target=min(nodes)
+
+                publish_queue.put_nowait({
+                    "task": "deploy",
+                    "remove": False,
+                    "app_name": app_name,
+                    "deploy_instruction": {deploy_target: 1}
+                })
+
 
         gevent.sleep(0)
 

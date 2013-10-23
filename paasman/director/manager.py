@@ -24,7 +24,7 @@ from paasman import config
 #from paasman.director import models
 from paasman.director import exceptions
 
-COREOS_IMAGE = "ami-00000003"
+COREOS_IMAGE = "ami-0000002d"
 name_re = re.compile("^([a-zA-Z]+)$")
 
 tasks = Queue()
