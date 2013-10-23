@@ -6,6 +6,7 @@
     sanpet-8
 """
 
+import stacktrace
 import json
 import hashlib
 import gevent
@@ -147,64 +148,69 @@ def docker_worker():
         print "docker_worker received work!"
         task_type = task.get("task")
 
-        if task_type == "deploy":
-            app_name = task.get("app_name")
-            remove = task.get("remove")
+        try:
+            if task_type == "deploy":
+                app_name = task.get("app_name")
+                remove = task.get("remove")
 
-            if remove:
-                # we remove the existing containers for this app.
-                # TODO: change method when we allow cluster deploys
+                if remove:
+                    # we remove the existing containers for this app.
+                    # TODO: change method when we allow cluster deploys
+                    for c_id in agent_manager.get_containers(app_name):
+                      docker_client.kill(c_id) # or stop? probably kill?
+
+                # TODO: this just create instances of new containers to test how it works
+                #       and atm just create a single container
+                deploy_instruction = task.get("deploy_instruction")
+                print "deploy_instruction", task
+                processes = deploy_instruction.get(agent_manager.ip)
+                if processes:
+                    for x in xrange(processes):
+                        container = docker_client.create_container(
+                            image="paasman/apprunner",
+                            command=["./paasman-node/runner.sh"],
+                            environment={
+                            "APP_NAME": app_name
+                        })
+                        docker_client.start(container.get("Id"))
+                        print "Container with id=%s started!" % container.get("Id")
+                        agent_manager.add_container(app_name, container.get("Id"))
+            elif task_type == "undeploy":
+                app_name = task.get("app_name")
                 for c_id in agent_manager.get_containers(app_name):
-                  docker_client.kill(c_id) # or stop? probably kill?
+                    docker_client.kill(c_id) # or stop? probably kill?
+                director_tasks.put_nowait({
+                    "task": "undeployed",
+                    "app_name": app_name
+                })
+            elif task_type == "docker_event":
+                print "docker_task:", task
+                docker_task = task.get("payload")
+                if docker_task.get("status") == "start" and docker_task.get("from") == "paasman/apprunner:latest":
+                    app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
 
-            # TODO: this just create instances of new containers to test how it works
-            #       and atm just create a single container
-            deploy_instruction = task.get("deploy_instruction")
-            print "deploy_instruction", task
-            processes = deploy_instruction.get(agent_manager.ip)
-            if processes:
-                for x in xrange(processes):
-                    container = docker_client.create_container(
-                        image="paasman/apprunner",
-                        command=["./paasman-node/runner.sh"],
-                        environment={
-                        "APP_NAME": app_name
+                    exposed_port = docker_client.port(docker_task.get("id"), "80")
+                    uri = "http://%s:%s" % (agent_manager.ip, exposed_port)
+
+                    director_tasks.put_nowait({
+                        "task": "add_process",
+                        "app_name": app_name,
+                        "uri": uri,
+                        "container_id": docker_task.get("id")
                     })
-                    docker_client.start(container.get("Id"))
-                    print "Container with id=%s started!" % container.get("Id")
-                    agent_manager.add_container(app_name, container.get("Id"))
-        elif task_type == "undeploy":
-            app_name = task.get("app_name")
-            for c_id in agent_manager.get_containers(app_name):
-                docker_client.kill(c_id) # or stop? probably kill?
-            director_tasks.put_nowait({
-                "task": "undeployed",
-                "app_name": app_name
-            })
-        elif task_type == "docker_event":
-            print "docker_task:", task
-            docker_task = task.get("payload")
-            if docker_task.get("status") == "start" and docker_task.get("from") == "paasman/apprunner:latest":
-                app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
-
-                exposed_port = docker_client.port(docker_task.get("id"), "80")
-                uri = "http://%s:%s" % (agent_manager.ip, exposed_port)
-
-                director_tasks.put_nowait({
-                    "task": "add_process",
-                    "app_name": app_name,
-                    "uri": uri,
-                    "container_id": docker_task.get("id")
-                })
-            elif docker_task.get("status") == "kill" and docker_task.get("from") == "paasman/apprunner:latest":
-                app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
-                director_tasks.put_nowait({
-                    "task": "remove_process",
-                    "app_name": app_name,
-                    "container_id": docker_task.get("id")
-                })
-        #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
-        gevent.sleep(0)
+                elif docker_task.get("status") == "kill" and docker_task.get("from") == "paasman/apprunner:latest":
+                    app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
+                    director_tasks.put_nowait({
+                        "task": "remove_process",
+                        "app_name": app_name,
+                        "container_id": docker_task.get("id")
+                    })
+            #d.create_container("paasman/apprunner", [u'./paasman-node/runner.sh'], environment={"APP_NAME": "mikael"})
+        except Exception as e:
+            print "docker_worker", e
+            traceback.print_exc(file=sys.stdout)
+        finally:
+            gevent.sleep(0)
 
 
 
