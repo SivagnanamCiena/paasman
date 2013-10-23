@@ -61,6 +61,12 @@ class Agent(object):
         self._apps[app_name].append(container_id)
         self._containers[container_id] = app_name
 
+    def remove_container(self, container_id):
+        app = self._containers.get(container_id)
+        if app:
+            self._apps.get(app).remove(container_id)
+            del self._containers[container_id]
+
     def get_containers(self, app_name):
         return self._apps.get(app_name, [])
 
@@ -90,6 +96,9 @@ def event_listener():
             if e.errno == zmq.EAGAIN:
                 gevent.sleep(0) # this isn't neccessary anymore...TODO: remove this.
             print "event_listener-error:", e
+        except Exception as e:
+            print "event_listener", e
+            traceback.print_exc(file=sys.stdout)
         finally:
             gevent.sleep(0)
 
@@ -100,16 +109,21 @@ def subscriber_listener():
     print "subscriber_listener", director_ip
 
     while True:
-        print "subscriber_listen"
-        msg = subscriber.recv()
-        print msg
-        task = json.loads(msg)
-        task_type = task.get("task")
-        if task_type == "deploy":
-            docker_tasks.put_nowait(task) # just send the task dict
-        elif task_type == "undeploy":
-            docker_tasks.put_nowait(task) # just send the task dict 
-        gevent.sleep(0)
+        try:
+            print "subscriber_listen"
+            msg = subscriber.recv()
+            print msg
+            task = json.loads(msg)
+            task_type = task.get("task")
+            if task_type == "deploy":
+                docker_tasks.put_nowait(task) # just send the task dict
+            elif task_type == "undeploy":
+                docker_tasks.put_nowait(task) # just send the task dict
+        except Exception as e:
+            print "subscriber_listener", e
+            traceback.print_exc(file=sys.stdout)
+        finally:
+            gevent.sleep(0)
 
 
 def docker_listener():
@@ -131,8 +145,9 @@ def docker_listener():
                     })
                     print "put task in docker_tasks"
                     builder = [] # reset
-        except:
-            pass
+        except Exception as e:
+            print "ERROR: docker_listener", e
+            traceback.print_exc(file=sys.stdout)
         finally:
             gevent.sleep(0)
 
@@ -158,6 +173,7 @@ def docker_worker():
                 # TODO: change method when we allow cluster deploys
                 for c_id in agent_manager.get_containers(app_name):
                   docker_client.kill(c_id) # or stop? probably kill?
+                  agent_manager.remove_container(c_id)
 
             # TODO: this just create instances of new containers to test how it works
             #       and atm just create a single container
