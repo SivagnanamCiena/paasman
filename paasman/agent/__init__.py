@@ -223,7 +223,7 @@ def docker_worker():
                 except Exception as e:
                     print "docker_event/start", e
                     traceback.print_exc(file=sys.stdout)
-            elif docker_task.get("status") in ("kill", "die") and docker_task.get("from") == "paasman/apprunner:latest":
+            elif docker_task.get("status") in "kill" and docker_task.get("from") == "paasman/apprunner:latest":
                 app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
                 director_tasks.put_nowait({
                     "task": "remove_process",
@@ -251,6 +251,6 @@ def agent_notifier_runner(host):
             # TODO: wrap in try-except block?
         except Exception as e:
             print "agent_notifier_runner:", e
-            gevent.sleep(0)
+            gevent.sleep(10)
         
 

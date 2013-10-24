@@ -54,11 +54,15 @@ def worker():
                     return
                 app.add_process(task.get("uri"), task.get("container_id"))
             elif task_type == "remove_process":
-                app = director_manager.get_application(task.get("app_name"))
-                if not app:
-                    print "remove_process:", "the application %s doesn't exists" % task.get("app_name", "?")
+                app_name = task.get("app_name")
+                if app_name:
+                    app = director_manager.get_application(app_name)
+                    if not app:
+                        print "remove_process:", "the application %s doesn't exists" % task.get("app_name", "?")
+                    else:
+                        app.remove_process(task.get("container_id"))
                 else:
-                    app.remove_process(task.get("container_id"))
+                    print "remove_process, app_name is None" 
             elif task_type == "upscale":
                 # upscale, app_name, 
                 app_name = task.get("app_name")
@@ -117,7 +121,9 @@ def manager():
     socket.bind("tcp://*:5111")
 
     while True:
+        print "manager waits on zmq"
         msg = socket.recv()
+        print "manager received:", msg
         message = json.loads(msg)
         tasks.put_nowait(message)
         socket.send("task put in director queue %s" % msg)

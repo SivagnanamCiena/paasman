@@ -205,6 +205,7 @@ class DirectorManager(object):
             task = {
                 "task": "deploy",
                 "app_name": name,
+                "remove": True,
                 "deploy_instruction": nodes,
             }
 
