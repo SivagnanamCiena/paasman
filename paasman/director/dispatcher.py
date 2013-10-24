@@ -142,7 +142,11 @@ def cluster_listener():
                 "ip": r.value
             })
         elif r.action == "DELETE": # a node has gone away
-            pass
+            tasks.put_nowait({
+                "task": "delete_node",
+                "name": r.key.split("/")[-1],
+                #"ip": r.value
+            })
         gevent.sleep(0)
 
 def router_uri_responder():
