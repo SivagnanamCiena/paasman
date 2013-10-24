@@ -6,6 +6,7 @@
     sanpet-8
 """
 
+import traceback
 from flask import Flask, request, jsonify, send_from_directory, send_file
 #from paasman.director.db import session
 from paasman.director import director_manager, etcd_client
@@ -49,6 +50,7 @@ def deploy_app():
             return "Error during upload#1"
         except Exception as e:
             print "Error during upload#2", e
+            traceback.print_exc(file=sys.stdout)
             return "Error during upload#2" # TODO: use api_error
         #appfile.save(os.path.join("_deployments", appfile.filename))
         #return appfile.filename

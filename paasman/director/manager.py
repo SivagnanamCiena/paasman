@@ -7,6 +7,7 @@
 """
 
 import traceback
+import hashlib
 from collections import defaultdict
 import os
 import sys
@@ -166,16 +167,18 @@ class DirectorManager(object):
                     nodes[node_cycle.next()] += 1
             else:
                 print "More instances than running!"
-                def _wait_on_agent(app_name, processes):
-                    instances = director_manager.add_vm_instances(1)
-                    ip = hashlib
+                def _wait_on_agent(director_manager, app_name, processes):
+                    from paasman.director import etcd_client
                     try:
+                        print "trying to create vm (in _wait_on_agent in manager)"
+                        instances = director_manager.add_vm_instances(1)
+                        ip = instances[0].private_ip_address
                         print "_wait_on_agent-1"
                         r = etcd_client.watch("services/agents/%s" % hashlib.sha1(ip).hexdigest(), timeout=60)
                         print "_wait_on_agent-2"
                         publish_queue.put_nowait({
                             "task": "deploy",
-                            "remove": false,
+                            "remove": False,
                             "app_name": task.get("app_name"),
                             "deploy_instruction": {ip: processes}
                         })
@@ -185,19 +188,19 @@ class DirectorManager(object):
                         return
 
                 new_instances = instances - len(self._nodes)
-                fair_split = processes / (self._nodes + new_instances)
+                fair_split = processes / (len(self._nodes) + new_instances)
 
                 nodes = {node.ip: 0 for node in self._nodes.values()}
-                for key, v in nodes:
-                    nodes[k] = fair_split
+                for key in nodes.keys():
+                    nodes[key] = fair_split
 
                 new_instances_processes = []
                 for x in xrange(new_instances):
-                    new_instances_processes = fair_split
-                new_instances_processes[-1] += (processes % (self._nodes + new_instances))
+                    new_instances_processes.append(fair_split)
+                new_instances_processes[-1] += (processes % (len(self._nodes) + new_instances))
                 print "Finished --- More instances than running!"
                 for proc_count in new_instances_processes:
-                    gevent.spawn(_wait_on_agent, app_name, proc_count)
+                    gevent.spawn(_wait_on_agent, self, name, proc_count)
 
             task = {
                 "task": "deploy",

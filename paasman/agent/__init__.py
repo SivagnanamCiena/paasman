@@ -246,7 +246,7 @@ def agent_notifier_runner(host):
 
     while True:
         try:
-            r = etcd_client.set("services/agents/%s" % key, host, ttl=30)
+            r = etcd_client.set("services/agents/%s" % key, host, ttl=60) # changed from 30
             gevent.sleep(14)
             # TODO: wrap in try-except block?
         except Exception as e:
