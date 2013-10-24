@@ -83,6 +83,7 @@ def event_listener():
     #print docker_client.info()
     while True:
         try:
+            print "event_listener listen for work"
             task = director_tasks.get()
             print "send to master", task
             teller.send(json.dumps(task))
@@ -93,9 +94,9 @@ def event_listener():
             #gevent.sleep(5) # wait 5 seconds since we doesn't want to send a flood of messages
             # but we should block on the director_tasks later
         except zmq.ZMQError as e:
+            print "event_listener-error:", e
             if e.errno == zmq.EAGAIN:
                 gevent.sleep(0) # this isn't neccessary anymore...TODO: remove this.
-            print "event_listener-error:", e
         except Exception as e:
             print "event_listener", e
             traceback.print_exc(file=sys.stdout)
@@ -182,15 +183,19 @@ def docker_worker():
             processes = deploy_instruction.get(agent_manager.ip)
             if processes:
                 for x in xrange(processes):
-                    container = docker_client.create_container(
-                        image="paasman/apprunner",
-                        command=["./paasman-node/runner.sh"],
-                        environment={
-                        "APP_NAME": app_name
-                    })
-                    docker_client.start(container.get("Id"))
-                    print "Container with id=%s started!" % container.get("Id")
-                    agent_manager.add_container(app_name, container.get("Id"))
+                    try:
+                        container = docker_client.create_container(
+                            image="paasman/apprunner",
+                            command=["./paasman-node/runner.sh"],
+                            environment={
+                            "APP_NAME": app_name
+                        })
+                        docker_client.start(container.get("Id"))
+                        print "Container with id=%s started!" % container.get("Id")
+                        agent_manager.add_container(app_name, container.get("Id"))
+                    except Exception as e:
+                        print "deploy", e
+                        traceback.print_exc(file=sys.stdout)
         elif task_type == "undeploy":
             app_name = task.get("app_name")
             for c_id in agent_manager.get_containers(app_name):
@@ -218,7 +223,7 @@ def docker_worker():
                 except Exception as e:
                     print "docker_event/start", e
                     traceback.print_exc(file=sys.stdout)
-            elif docker_task.get("status") == "kill" and docker_task.get("from") == "paasman/apprunner:latest":
+            elif docker_task.get("status") in ("kill", "die") and docker_task.get("from") == "paasman/apprunner:latest":
                 app_name = agent_manager.get_app_by_container_id(docker_task.get("id"))
                 director_tasks.put_nowait({
                     "task": "remove_process",

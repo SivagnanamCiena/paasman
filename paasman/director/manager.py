@@ -6,6 +6,7 @@
     sanpet-8
 """
 
+import traceback
 from collections import defaultdict
 import os
 import sys
@@ -164,15 +165,44 @@ class DirectorManager(object):
                 for processes in xrange(processes):
                     nodes[node_cycle.next()] += 1
             else:
-                nodes = []
-                print "More instances than running, not implemented yet!"
+                print "More instances than running!"
+                def _wait_on_agent(app_name, processes):
+                    instances = director_manager.add_vm_instances(1)
+                    ip = hashlib
+                    try:
+                        print "_wait_on_agent-1"
+                        r = etcd_client.watch("services/agents/%s" % hashlib.sha1(ip).hexdigest(), timeout=60)
+                        print "_wait_on_agent-2"
+                        publish_queue.put_nowait({
+                            "task": "deploy",
+                            "remove": false,
+                            "app_name": task.get("app_name"),
+                            "deploy_instruction": {ip: processes}
+                        })
+                    except Exception as e:
+                        print "event_listener", e
+                        traceback.print_exc(file=sys.stdout)
+                        return
+
+                new_instances = instances - len(self._nodes)
+                fair_split = processes / (self._nodes + new_instances)
+
+                nodes = {node.ip: 0 for node in self._nodes.values()}
+                for key, v in nodes:
+                    nodes[k] = fair_split
+
+                new_instances_processes = []
+                for x in xrange(new_instances):
+                    new_instances_processes = fair_split
+                new_instances_processes[-1] += (processes % (self._nodes + new_instances))
+                print "Finished --- More instances than running!"
+                for proc_count in new_instances_processes:
+                    gevent.spawn(_wait_on_agent, app_name, proc_count)
 
             task = {
                 "task": "deploy",
                 "app_name": name,
                 "deploy_instruction": nodes,
-                # TODO: add nodes with deployment spec, like nodes: {"node_id-1": 5, "node_id-2": 3} will deploy
-                #       8 processes on 2 instances
             }
 
             tasks.put_nowait(task)
@@ -180,6 +210,8 @@ class DirectorManager(object):
 
             return True
         except IOError as e:
+            print "deploy_application", e
+            traceback.print_exc(file=sys.stdout)
             raise exceptions.AppUploadError(e)
 
     def undeploy_application(self, name):
